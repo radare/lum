@@ -77,14 +77,17 @@ function Lumit.build_dep(self, pkg, nextfn)
 end
 
 function Lumit.build(self, nextfn)
+	-- XXX: this must be luvit! lua5.x != luajit --
 	local path = self.LUA_DIR
-	if path == "" then path = "/usr/include" end
-	if FS.exists_sync ("/usr/include/lua.h") then
-		path = "/usr/include" end
-	if FS.exists_sync ("/opt/local/include/lua.h") then
-		path = "/opt/local/include" end
-	if FS.exists_sync ("/usr/local/include/lua.h") then
-		path = "/usr/local/include" end
+	if path == "" then 
+		path = "/usr/include"
+		if FS.exists_sync ("/usr/include/lua.h") then
+			path = "/usr/include"
+		elseif FS.exists_sync ("/opt/local/include/lua.h") then
+			path = "/opt/local/include"
+		elseif FS.exists_sync ("/usr/local/include/lua.h") then
+			path = "/usr/local/include" end
+	end
 	if not FS.exists_sync (path.."/lua.h") then
 		path = path.."/deps/luajit/src"
 		if not FS.exists_sync (path.."/lua.h") then
