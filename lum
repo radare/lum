@@ -18,47 +18,82 @@ lum - luvit modules
  Package repository:
     -s, search [str]   search in pkg database
 
- Environment:
-    CC, CFLAGS, LDFLAGS, LUA_DIR
+ Environment and ~/.lumrc:
+    CC, CFLAGS, LDFLAGS, LUA_DIR, LUVIT_DIR
 ]]
 end
 
 -- TODO:
 --    update           - update database from remote server (TODO)
 --    push             - push this package to the server (TODO)
--- Configuration ~/.lumrc
---   user=pancake
---   pass=83jf4802gghsdf8
---   trust=creationix luvit ...
+--    LUVIT_REPO .. 
 
--- hacky! use a table
-Lumit:init (function ()
-	local a0 = process.argv[1]
-	if not a0 then
-		Lumit:deps (function()
-			Lumit:build ()
-		end)
-	elseif a0 == "build" or a0 == "-b" then
-		Lumit:build ()
-	elseif a0 == "deps" or a0 == "-d" then
-		Lumit:deps()
-	elseif a0 == "clean" or a0 == "-c" then
-		Lumit:clean ()
-	elseif a0 == "search" or a0 == "-s" then
-		Lumit:search (process.argv[2])
-	elseif a0 == "install" or a0 == "-i" then
-		Lumit:install (process.argv[2])
-	elseif a0 == "uninstall" or a0 == "rm" or a0 == "-u" then
-		Lumit:uninstall (process.argv[2])
-	elseif a0 == "list" or a0 == "-l" or a0 == "ls" then
-		Lumit:list ()
-	elseif a0 == "help" or a0 == "-h" then
-		show_help ()
-	elseif a0 == "info" or a0 == "-I" then
-		Lumit:info (process.argv[2], function (pkg)
-			p ("PKG", pkg)
-		end)
-	else
-		p ("ERROR", "Unknown argument: ".. a0)
+-- copypasta
+local table = require ("table")
+function split(str, pat)
+        local t = {}  -- NOTE: use {n = 0} in Lua-5.0
+        local fpat = "(.-)" .. pat
+        local last_end = 1
+        local s, e, cap = str:find (fpat, 1)
+        while s do
+                if s ~= 1 or cap ~= "" then
+			table.insert(t, cap)
+                end
+                last_end = e+1
+                s, e, cap = str:find(fpat, last_end)
+        end
+        if last_end <= #str then
+                cap = str:sub(last_end)
+                table.insert(t, cap)
+        end
+        return t
+end
+
+local FS = require ("fs")
+local home = process.env['HOME']
+FS.read_file (home.."/.lumrc", function (err, data)
+	if not err then
+		-- TODO: process env override config? --
+		local ls = split (data, "\n") 
+		for i=1,#ls do
+			local row = split (ls[i], "=")
+			if (row and row[1] and row[2]) then
+				process.env[row[1]] = row[2]
+			end
+		end
 	end
+
+	-- hacky! use a table
+	Lumit:init (function ()
+		local a0 = process.argv[1]
+		if not a0 then
+			Lumit:deps (function()
+				Lumit:build ()
+			end)
+		elseif a0 == "build" or a0 == "-b" then
+			Lumit:build ()
+		elseif a0 == "deps" or a0 == "-d" then
+			Lumit:deps()
+		elseif a0 == "clean" or a0 == "-c" then
+			Lumit:clean ()
+		elseif a0 == "search" or a0 == "-s" then
+			Lumit:search (process.argv[2])
+		elseif a0 == "install" or a0 == "-i" then
+			Lumit:install (process.argv[2])
+		elseif a0 == "deploy" or a0 == "-D" then
+			Lumit:deploy (process.argv[2])
+		elseif a0 == "uninstall" or a0 == "rm" or a0 == "-u" then
+			Lumit:uninstall (process.argv[2])
+		elseif a0 == "list" or a0 == "-l" or a0 == "ls" then
+			Lumit:list ()
+		elseif a0 == "help" or a0 == "-h" then
+			show_help ()
+		elseif a0 == "info" or a0 == "-I" then
+			Lumit:info (process.argv[2], function (pkg)
+				p ("PKG", pkg)
+			end)
+		else
+			p ("ERROR", "Unknown argument: ".. a0)
+		end
+	end)
 end)
