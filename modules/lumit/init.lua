@@ -235,7 +235,7 @@ function Lumit.info(self, pkg, nextfn)
 	if ok then 
 		if nextfn then nextfn (deps) end
 	else
-		p ("ERROR", deps)
+		-- p ("ERROR", deps)
 		if nextfn then nextfn (nil) end
 		-- process.exit (1)
 	end

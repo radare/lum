@@ -95,8 +95,6 @@ function getsource(fn)
 			-- TODO
 		end)
 		p ("TODO", "hg")
-	else
-		p ("ERROR", "unknown repository")
 	end
 end
 
