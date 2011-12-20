@@ -1,9 +1,9 @@
 -- copyleft -- 2011 -- pancake<nopcode.org> --
 
-local FS = require ("fs")
-local DB = require ("./db")
-local Stack = require ("./stack")
 local System = require ("./system")
+local Stack = require ("./stack")
+local DB = require ("./db")
+local FS = require ("fs")
 
 local Lumit = {}
 
@@ -17,17 +17,21 @@ end
 
 local string = require ("string")
 function Lumit.search (self, k)
-	local db = DB.open ()
-	db:search (k, function (x)
-		local s = string.format ("%10s    %s   %s",
-			x.name, x.version, x.description)
-		print (s)
+	DB.open (function (db)
+		db:search (k, function (u,x)
+			local s = string.format ("%-10s %-6s %-10s %s",
+				x.name, x.version, u, x.description)
+			print (s)
+		end)
 	end)
 end
 
 function Lumit.init (self, fn)
 	Lumit.CWD = process.cwd ()
+	Lumit.REPOS = process.env["REPOS"] or nil
+	Lumit.HOME = process.env["HOME"] or "/tmp"
 	Lumit.MAKE = process.env["MAKE"] or "make"
+	Lumit.USER = process.env["MAKE"] or "anonymous"
 	Lumit.CC = process.env["CC"] or "gcc -arch i386"
 	Lumit.LUVIT_DIR = process.env["LUVIT_DIR"] or ""
 	Lumit.LUA_DIR = process.env["LUA_DIR"]
@@ -53,24 +57,29 @@ end
 function Lumit.build_dep(self, pkg, nextfn)
 	local wrkdir = self.CWD.."/_build"
 	if FS.exists_sync ("./modules/"..pkg) then
-		p ("Already installed: "..pkg)
+		-- p ("module "..pkg.." already installed")
 		return
 	end
-	local db = DB.open ()
-	db:find (pkg, function (x)
+	DB.open (function (db)
+	db:find (pkg, function (u, x)
 		if not x then 
 			p ("ERROR", "Cannot find pkg "..pkg.." in database")
 			-- process.exit (1)
 			return
 		end
 		local wrkname = wrkdir.."/"..x.name
+		-- print ("==> "..u.." : "..x.name)
 		if FS.exists_sync (wrkname) then
-			p ("Already installed: "..pkg)
+			-- p ("Already installed: "..pkg)
 			cmd =   "cd "..wrkdir.."/"..x.name.." ; "..
 				"lum && lum deploy '"..self.CWD.."'"
 			p (cmd)
 			System.cmd (cmd, function (cmd, err)
-				p ("exit with "..err)
+				if err>0 then
+					p ("ERROR", cmd)
+				else
+					p ("module "..pkg.." installed")
+				end
 			end)
 			return
 		else
@@ -83,10 +92,11 @@ function Lumit.build_dep(self, pkg, nextfn)
 						process.exit (1)
 					end
 					cmd =   "cd "..wrkdir.."/"..x.name.." ; "..
-						"lum && lum install "..self.CWD
+						"lum && lum deploy "..self.CWD
 					p (cmd)
 					System.cmd (cmd, function (cmd, err)
-						p ("exit with "..err)
+						if err>0 then p ("exit with "..err) 
+						else p ("module "..pkg.." installed") end
 					end)
 				end)
 			elseif x.type == "dist" then
@@ -97,6 +107,7 @@ function Lumit.build_dep(self, pkg, nextfn)
 			end
 		end
 		if nextfn then nextfn () end
+	end)
 	end)
 end
 
@@ -116,7 +127,8 @@ function Lumit.build(self, nextfn)
 	if not FS.exists_sync (path.."/lua.h") then
 		path = path.."/deps/luajit/src"
 		if not FS.exists_sync (path.."/lua.h") then
-			print ("ERROR: Cannot find lua.h in LUVIT_DIR ("..self.LUVIT_DIR..")")
+			p ("ERROR", "Cannot find lua.h in LUVIT_DIR ("..self.LUVIT_DIR..")")
+			p ("INFO", "Fill your ~/.lum/config with KEY=VALUE lines")
 			process.exit (1)
 		end
 	end
@@ -136,9 +148,9 @@ function Lumit.build(self, nextfn)
 			" CFLAGS='"..cflags.."'"..
 			" LDFLAGS='"..ldflags.."'"..
 			" LUA_DIR='"..path.."' "..Lumit.MAKE
-		p(cmd)
+		-- p(cmd)
 		System.cmd (cmd, function (cmd, err)
-			print ("exit with "..err)
+			if err>0 then print ("exit with "..err) end
 			if nextfn then nextfn (self) end
 		end)
 	else
@@ -148,20 +160,13 @@ end
 
 function Lumit.deps(self, nextfn)
 	local ok, pkg = pcall (require, process.cwd ()..'/package')
-	if ok then
-		if #pkg.dependencies == 0 then
-			p ("This package has zero dependencies")
-		else
-			for i = 1, #pkg.dependencies do
-				p ("---> ",pkg.dependencies[i])
-				self:build_dep (pkg.dependencies[i])
-			end
+	if ok and #pkg.dependencies>0 then
+		for i = 1, #pkg.dependencies do
+			-- p ("---> ",pkg.dependencies[i])
+			self:build_dep (pkg.dependencies[i])
 		end
-		if nextfn then nextfn (false) end
-	else
-		p ("ERROR", pkg)
-		if nextfn then nextfn (true) end
 	end
+	if nextfn then nextfn (not ok) end
 end
 
 function Lumit.uninstall(self, pkg, nextfn)
@@ -188,12 +193,12 @@ function Lumit.deploy(self, path, nextfn)
 	local pkg = self:info (nil, function (pkg)
 		local pkgname = pkg['name']
 		local cmd =
-			"ls modules/"..pkgname.."/ ; "..
+			-- "ls modules/"..pkgname.."/ ; "..
 			"mkdir -p '"..path.."/modules/"..pkgname.."' && "..
 			"cp -f package.lua '"..path.."/modules/"..pkgname.."' && "..
 			"cp -f modules/"..pkgname.."/* '"..path.."/modules/"..pkgname.."'"
 		-- TODO: copy binaries using luvit-fsutils
-		p ("--->"..cmd)
+		-- p ("--->"..cmd)
 		System.cmd (cmd, function (cmd, err)
 			if err>0 then
 				p ("ERROR", "Installation failed for module "..pkgname)
@@ -210,26 +215,74 @@ end
 function Lumit.cmd(x)
 	if Lumit.cmd[x] then
 		return Lumit.cmd[x](a)
-	else
-		print "Invalid command"
-		process.exit (1)
 	end
+	print ("Invalid command '"..x.."'")
+	process.exit (1)
 end
 
 function Lumit.info(self, pkg, nextfn)
-	local ok, deps = pcall (require, process.cwd ()..'/package')
+	local ok, deps 
+	if pkg then
+		ok, deps = pcall (require, pkg) 
+	else
+		ok, deps = pcall (require, process.cwd ()..'/package')
+	end
 	if ok then 
 		if nextfn then nextfn (deps) end
 	else
-		p ("ERROR", deps)
+		-- p ("ERROR", deps)
 		if nextfn then nextfn (nil) end
-		process.exit (1)
+		-- process.exit (1)
 	end
 end
 
 function Lumit.list(self)
 	-- TODO: show package.lua info
 	System.cmd ("ls modules/")
+end
+
+function Lumit.json(self, pkg, fn)
+	if not pkg then
+		pkg = require (pkg)
+	else
+		pkg = require (self.CWD.."/package.lua")
+	end
+	local j = {}
+	j.name = pkg.name
+	j.version = pkg.version
+	j.description = pkg.description
+		j.url = "jiji"
+	getsource (function (err, t, u)
+		j['type'] = t
+		j.url = u
+		print (JSON.encode (j))
+	end)
+end
+
+function Lumit.update(self, fn)
+	if not Lumit.REPOS then
+		p ("ERROR", "undefined REPOS")
+		process.exit (1)
+	end
+	local dir = Lumit.HOME.."/.lum/db"
+	print ("Updating ~/.lum/db ...")
+	System.cmd (
+		"mkdir -p "..dir.." && cd '"..dir.."' && rm -f * && "..
+		"for a in "..Lumit.REPOS.." ; do "..
+		"wget --no-check-certificate -c -q --progress=bar:force $a"..
+		" ; done",
+		function (cmd, ret) 
+			if ret>0 then
+				print (cmd:replace(";","\n"))
+			else
+				print ("Done")
+			end
+			if fn then fn() end
+		end)
+end
+
+function Lumit.push(self, fn)
+	p ("TODO", "push")
 end
 
 return Lumit

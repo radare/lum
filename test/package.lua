@@ -4,7 +4,9 @@ return {
   description = "luvit module installer",
   author = "pancake <pancake@nopcode.org>",
   dependencies = {
-    "json"
+    "json",
+    "template",
+    "irc"
 --, "sdb"
   },
 }

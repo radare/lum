@@ -5,5 +5,5 @@ return {
   author = "pancake <pancake@nopcode.org>",
   dependencies = {
 --    "json", "sdb"
-  },
+  }
 }
