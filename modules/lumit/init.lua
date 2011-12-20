@@ -137,7 +137,8 @@ function Lumit.build(self, nextfn)
 	-- linker flags
 	local ldflags = ""
 	if Lumit.UNAME == "Darwin i386" then
-		ldflags = "-bundle -undefined dynamic_lookup"
+		ldflags = "-dynamiclib -undefined dynamic_lookup"
+		-- ldflags = "-dynamic -fPIC"
 	else
 		ldflags = "-shared -fPIC"
 	end
@@ -190,7 +191,11 @@ function Lumit.deploy(self, path, nextfn)
 		p ("Missing argument")
 		return
 	end
-	local pkg = self:info (nil, function (pkg)
+	self:info (nil, function (pkg)
+		if not pkg then
+			p("oops")
+			process.exit (1)
+		end
 		local pkgname = pkg['name']
 		local cmd =
 			-- "ls modules/"..pkgname.."/ ; "..
@@ -230,7 +235,7 @@ function Lumit.info(self, pkg, nextfn)
 	if ok then 
 		if nextfn then nextfn (deps) end
 	else
-		-- p ("ERROR", deps)
+		p ("ERROR", deps)
 		if nextfn then nextfn (nil) end
 		-- process.exit (1)
 	end
