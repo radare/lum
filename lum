@@ -7,30 +7,25 @@ function show_help()
 lum - luvit modules
 
  Actions:
-    -d, deps             fetch, build and install all dependencies
     -b, build            compile module
     -c, clean            clean module
-    -D, deploy [path]    install current package into destination
-    -i, install [pkg]    install given package
-    -r, remove [pkg]     alias for 'lum rm' (uninstall package)
+    -d, deploy [path]    install current package into destination
+    -D, deps             fetch, build and install all dependencies
+    -i, install [pkg]    install given package (pkg@repo to force repo)
     -I, info             pretty print ./package.lua
     -l, ls, list         alias for 'ls'. list all installed packages
+    -r, remove [pkg]     alias for 'lum rm' (uninstall package)
 
  Package repository:
-    -s, search [str]     search in pkg database
     -j, json             create json from current package
     -p, push [json]      push json file to remove repository
+    -s, search [str]     search in pkg database
     -u, update           update local database from remote repositories
 
  Environment and ~/.lum/config:
     CC, CFLAGS, LDFLAGS, LUA_DIR, LUVIT_DIR, USER, REPOS
 ]]
 end
-
--- TODO:
---    update           - update database from remote server (TODO)
---    push             - push this package to the server (TODO)
---    LUVIT_REPO .. 
 
 -- copypasta.. move to Utils
 local table = require ("table")
@@ -57,7 +52,7 @@ end
 local FS = require ("fs")
 local JSON = require ("lumit/json")
 function getsource(fn)
-	--- TODO: Add support for .svn and .hg
+	--- TODO: Add support for .svn
 	if FS.exists_sync (".git") then
 		local fd = FS.open (".git/config", "r", 0644, function (err, fd)
 			if err then
@@ -92,9 +87,34 @@ function getsource(fn)
 		end)
 	elseif FS.exists_sync (".hg") then
 		local fd = FS.open (".hg/hgrc", "r", 0644, function (err, fd)
-			-- TODO
+			if err then
+				p ("cannot find .hg/hgrc");
+				process.exit (1)
+			end
+			FS.read (fd, 0, 4096, function (err, data)
+				if err then
+					p ("error reading\n");
+					process.exit (1)
+				end
+				local t = "hg"
+				local u = "ssh://"
+				local s = data:find ("http://")
+				if s<1 then	
+					s = data:find ("ssh://")
+				end
+				if s>0 then
+					data = data:sub (s)
+					local n = data:find ("\n")
+					if n then
+						data = data:sub (0, n-1)
+					end
+					u = data
+				end
+				FS.close (fd, function (err)
+					fn (err, t, u)
+				end)
+			end)
 		end)
-		p ("TODO", "hg")
 	end
 end
 

@@ -56,12 +56,20 @@ end
 
 function Lumit.build_dep(self, pkg, nextfn)
 	local wrkdir = self.CWD.."/_build"
+	local at = pkg:find ('@')
+	local repo = nil
+	if at then
+		repo = pkg:sub (at+1)
+		pkg = pkg:sub (0, at-1)
+	end
+	p ("PKG", pkg)
+	p ("REPO", repo)
 	if FS.exists_sync ("./modules/"..pkg) then
 		-- p ("module "..pkg.." already installed")
 		return
 	end
 	DB.open (function (db)
-	db:find (pkg, function (u, x)
+	db:find (pkg, repo, function (u, x)
 		if not x then 
 			p ("ERROR", "Cannot find pkg "..pkg.." in database")
 			-- process.exit (1)
@@ -95,7 +103,9 @@ function Lumit.build_dep(self, pkg, nextfn)
 						"lum && lum deploy "..self.CWD
 					p (cmd)
 					System.cmd (cmd, function (cmd, err)
-						if err>0 then p ("exit with "..err) 
+						if err>0 then
+							p ("exit with "..err) 
+							process.exit (err)
 						else p ("module "..pkg.." installed") end
 					end)
 				end)
@@ -112,17 +122,6 @@ function Lumit.build_dep(self, pkg, nextfn)
 end
 
 function Lumit.build(self, nextfn)
-	-- XXX: this must be luvit! lua5.x != luajit --
---	local path = self.LUA_DIR
---	if path == "" then 
---		path = "/usr/include"
---		if FS.exists_sync ("/usr/include/lua.h") then
---			path = "/usr/include"
---		elseif FS.exists_sync ("/opt/local/include/lua.h") then
---			path = "/opt/local/include"
---		elseif FS.exists_sync ("/usr/local/include/lua.h") then
---			path = "/usr/local/include" end
---	end
 	local path = self.LUVIT_DIR or self.LUA_DIR or ""
 	if not FS.exists_sync (path.."/lua.h") then
 		path = path.."/deps/luajit/src"
@@ -151,7 +150,10 @@ function Lumit.build(self, nextfn)
 			" LUA_DIR='"..path.."' "..Lumit.MAKE
 		-- p(cmd)
 		System.cmd (cmd, function (cmd, err)
-			if err>0 then print ("exit with "..err) end
+			if err>0 then
+				print ("exit with "..err)
+				process.exit (err)
+			end
 			if nextfn then nextfn (self) end
 		end)
 	else

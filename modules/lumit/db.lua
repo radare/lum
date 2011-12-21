@@ -71,11 +71,11 @@ function DB.open (fn)
 			end
 		end
 
-		t.find = function (self, x, fn)
+		t.find = function (self, x, r, fn)
 			if not x then return end
 			for k,v in pairs (t.db) do
 				for K,V in pairs (t.db[k]) do
-					if self.db[k][K].name == x then
+					if (not r or r == k) and self.db[k][K].name == x then
 						fn (K, self.db[k][K])
 						return
 					end
