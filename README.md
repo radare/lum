@@ -23,5 +23,5 @@ Modules
 
 TODO
 ----
-support for ./init.lua
-support for ... 
+support for ./init.lua ??
+support for ./bin .. install in modules/pkg/bin

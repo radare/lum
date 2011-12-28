@@ -81,6 +81,14 @@ function Lumit.clean(self, pkg, nextfn)
 	end
 end
 
+function Lumit.build_dep_implicit(self, pkg, url, nextfn)
+	p("TODO: implicit dep installer", pkg, url)
+--	local c = "wget --no-check-certificate "..url
+--	unzip pkg
+--	lum
+--	lum install
+end
+
 function Lumit.build_dep(self, pkg, nextfn)
 	local wrkdir = self.CWD.."/_build"
 	local at = pkg:find ('@')
@@ -209,9 +217,14 @@ end
 
 function Lumit.deps(self, nextfn)
 	local ok, pkg = pcall (require, process.cwd ()..'/package')
+	-- name=url -- implicit source
+	for k, v in pairs(pkg.dependencies) do
+		self:build_dep_implicit (k, v)
+	end
+	-- name -- database repo
 	if ok and #pkg.dependencies>0 then
 		for i = 1, #pkg.dependencies do
-			-- p ("---> ",pkg.dependencies[i])
+			p ("---> ",pkg.dependencies[i])
 			self:build_dep (pkg.dependencies[i])
 		end
 	end
@@ -320,7 +333,7 @@ function Lumit.json(self, pkg, fn)
 	j.name = pkg.name
 	j.version = pkg.version
 	j.description = pkg.description
-		j.url = "jiji"
+	j.url = "url"
 	getsource (function (err, t, u)
 		j['type'] = t
 		j.url = u
@@ -351,7 +364,13 @@ function Lumit.sync(self, fn)
 end
 
 function Lumit.push(self, fn)
-	p ("TODO", "push")
+	-- TODO: use mktemp
+	local argv2 = process.argv[2] or ""
+	local x = "lum -j "..argv2.." | tee /tmp/"..self.USER.."; "..
+	Lumit.PUSH:gsub ("$0", "/tmp/"..self.USER).."; "..
+	"rm -f /tmp/"..self.USER
+	p ("PUSH", x)
+	System.cmd (x)
 end
 
 return Lumit

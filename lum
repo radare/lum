@@ -182,12 +182,7 @@ FS.read_file (home.."/.lum/config", function (err, data)
 				end
 			end)
 		elseif a0 == "push" or a0 == "-p" then
-			local System = require ("lumit/System")
-			local argv2 = process.argv[2] or ""
-			local x = "lum -j "..argv2.." |tee /tmp/"..Lumit.USER.."; "..
-				Lumit.PUSH:gsub("$0", "/tmp/"..Lumit.USER)
-			p ("PUSH", x)
-			System.cmd (x)
+			Lumit:push (process.argv[2])
 		elseif a0 == "json" or a0 == "-j" then
 			print ("[")
 			local argv2 = process.argv[2] or ""
