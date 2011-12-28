@@ -11,7 +11,12 @@ local string = require ("string")
 
 function Lumit.upgrade (self, k)
 	if not k then
-		System.cmd ("echo pop")
+		FS.readdir (process.cwd().."/modules", function (err, files)
+			if err then process.exit (1) end
+			for i=1,#files do
+				self:upgrade (files[i])
+			end
+		end)
 	else
 		Lumit:uninstall (k, function ()
 			Lumit:clean(k, function ()

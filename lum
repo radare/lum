@@ -178,7 +178,7 @@ FS.read_file (home.."/.lum/config", function (err, data)
 				if not pkg then
 					p ("Module is not installed")
 				else
-					p (process.argv[2], pkg)
+					p (process.argv[2] or "./package.lua", pkg)
 				end
 			end)
 		elseif a0 == "push" or a0 == "-p" then
