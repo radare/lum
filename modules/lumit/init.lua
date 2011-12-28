@@ -49,9 +49,11 @@ function Lumit.init (self, fn)
 end
 
 function Lumit.clean(self, nextfn)
-	System.cmd (Lumit.MAKE.." clean", function (ret)
-		if nextfn then nextfn (self) end
-	end)
+	if FS.exists_sync ("Makefile") then
+		System.cmd (Lumit.MAKE.." clean", function (ret)
+			if nextfn then nextfn (self) end
+		end)
+	end
 end
 
 function Lumit.build_dep(self, pkg, nextfn)
@@ -132,13 +134,23 @@ function Lumit.build(self, nextfn)
 		end
 	end
 	-- C preprocessor flags
+--	path = "/usr/"
+	System.cmdstr ("luvit-config --cflags", function(x,y)
+		
 	local cflags = "-I"..path
+	if not err then
+		cflags = y
+	end
+
 	-- linker flags
 	local ldflags = ""
 	if Lumit.UNAME == "Darwin i386" then
 		ldflags = "-dynamiclib -undefined dynamic_lookup"
+		--ldflags = "-dynamiclib" -- -undefined dynamic_lookup"
+--		ldflags = ldflags.." "..Lumit.LUVIT_DIR.."/deps/luajit/src/libluajit.a"
 		-- ldflags = "-dynamic -fPIC"
 	else
+		-- ldflags = "-dynamiclib -undefined dynamic_lookup"
 		ldflags = "-shared -fPIC"
 	end
 
@@ -159,6 +171,7 @@ function Lumit.build(self, nextfn)
 	else
 		if nextfn then nextfn (self) end
 	end
+	end)
 end
 
 function Lumit.deps(self, nextfn)
@@ -174,8 +187,8 @@ end
 
 function Lumit.uninstall(self, pkg, nextfn)
 	if not pkg then
-		p ("Missing argument")
-		return
+		print ("Usage: lum uninstall [pkg]")
+		process.exit (1)
 	end
 	local cmd = "rm -rf modules/"..pkg
 	p ("RUNCMD", cmd)
@@ -185,13 +198,18 @@ function Lumit.uninstall(self, pkg, nextfn)
 end
 
 function Lumit.install(self, pkg, nextfn)
-	self:build_dep (pkg, nextfn)
+	if not pkg then
+		print ("Usage: lum install [pkg]")
+		process.exit (1)
+	else
+		self:build_dep (pkg, nextfn)
+	end
 end
 
 function Lumit.deploy(self, path, nextfn)
 	if not path then
-		p ("Missing argument")
-		return
+		print ("Usage: lum deploy [path]")
+		process.exit (1)
 	end
 	self:info (nil, function (pkg)
 		if not pkg then
@@ -201,11 +219,12 @@ function Lumit.deploy(self, path, nextfn)
 		local pkgname = pkg['name']
 		local cmd =
 			-- "ls modules/"..pkgname.."/ ; "..
-			"mkdir -p '"..path.."/modules/"..pkgname.."' && "..
-			"cp -f package.lua '"..path.."/modules/"..pkgname.."' && "..
+			"mkdir -p '"..path.."/modules/"..pkgname.."'\n"..
+			"cp -f package.lua '"..path.."/modules/"..pkgname.."'\n"..
 			"cp -f modules/"..pkgname.."/* '"..path.."/modules/"..pkgname.."'"
 		-- TODO: copy binaries using luvit-fsutils
 		-- p ("--->"..cmd)
+		print (cmd)
 		System.cmd (cmd, function (cmd, err)
 			if err>0 then
 				p ("ERROR", "Installation failed for module "..pkgname)
