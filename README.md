@@ -12,15 +12,11 @@ A repository is just an URL pointing to a JSON file containing the packages info
 	lum -S       # fetch repositories into ~/.lum/db
 	lum -s sdb   # search for 'sdb' into the database
 
-Packages
---------
+How to create your repository
+-----------------------------
+lum -j     # show json from packages in current directory
+lum -p ..  # push all repos found in ..
 
-Type of packages
-----------------
-Tarball (xz, gz, bz2) -- add support for releases
-Repository (git, hg, svn) + optional revision
+Modules
+-------
 
-Compilation of modules
-----------------------
-Depends on make and gcc
-Sets special environment depending on OS/arch
