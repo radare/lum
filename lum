@@ -1,6 +1,7 @@
 #!/usr/bin/env luvit
 
 local Lumit = require ("lumit")
+Lumit.VERSION = "0.2"
 
 function show_help()
 	print [[
@@ -8,22 +9,24 @@ lum - luvit modules
 
  Actions:
     -b, build            compile module
-    -c, clean            clean module
-    -d, deploy [path]    install current package into destination
-    -D, deps             fetch, build and install all dependencies
+    -c, clean ([pkg])    clean module
+    -D, deploy [path]    install current package into destination
+    -d, deps             fetch, build and install all dependencies
     -i, install [pkg]    install given package (pkg@repo to force repo)
-    -I, info             pretty print ./package.lua
+    -u, upgrade [pkg]    reinstall given package (")
+    -I, info ([pkg])     pretty print ./package.lua or in modules/pkg
     -l, ls, list         alias for 'ls'. list all installed packages
     -r, remove [pkg]     alias for 'lum rm' (uninstall package)
 
  Package repository:
     -j, json             create json from current package
-    -p, push [json]      push json file to remove repository
+    -p, push [path]      create json and push it
     -s, search [str]     search in pkg database
-    -u, update           update local database from remote repositories
+    -S, sync             synchronize local database from remote repositories
+    -v, version          show version
 
  Environment and ~/.lum/config:
-    CC, CFLAGS, LDFLAGS, LUA_DIR, LUVIT_DIR, USER, REPOS
+    CC, CFLAGS, LDFLAGS, LUA_DIR, LUVIT_DIR, USER, PUSH, REPOS
 ]]
 end
 
@@ -51,14 +54,18 @@ end
 -- TODO: move outside!
 local FS = require ("fs")
 local JSON = require ("lumit/json")
-function getsource(fn)
+function getsource(path, fn)
+	if not path then path = "." end
+	--p("getsource", path)
 	--- TODO: Add support for .svn
-	if FS.exists_sync (".git") then
-		local fd = FS.open (".git/config", "r", 0644, function (err, fd)
+	--p(path.."/.git")
+	if FS.exists_sync (path.."/.git") then
+		local fd = FS.open (path.."/.git/config", "r", 0644, function (err, fd)
 			if err then
-				p ("cannot find .git/config");
+				p ("cannot find "..path.."/.git/config");
 				process.exit (1)
 			end
+					--fn (err, t, u)
 			FS.read (fd, 0, 4096, function (err, data)
 				if err then
 					p ("error reading\n");
@@ -85,10 +92,10 @@ function getsource(fn)
 				end)
 			end)
 		end)
-	elseif FS.exists_sync (".hg") then
-		local fd = FS.open (".hg/hgrc", "r", 0644, function (err, fd)
+	elseif FS.exists_sync (path.."/.hg") then
+		local fd = FS.open (path.."/.hg/hgrc", "r", 0644, function (err, fd)
 			if err then
-				p ("cannot find .hg/hgrc");
+				p ("cannot find "..path.."/.hg/hgrc");
 				process.exit (1)
 			end
 			FS.read (fd, 0, 4096, function (err, data)
@@ -115,6 +122,8 @@ function getsource(fn)
 				end)
 			end)
 		end)
+	else
+	--	fn (err, "dir", "")
 	end
 end
 
@@ -143,32 +152,67 @@ FS.read_file (home.."/.lum/config", function (err, data)
 			Lumit:build ()
 		elseif a0 == "deps" or a0 == "-d" then
 			Lumit:deps()
+		elseif a0 == "version" or a0 == "-v" then
+			print ("lum "..Lumit.VERSION.." copyleft pancake")
 		elseif a0 == "clean" or a0 == "-c" then
-			Lumit:clean ()
+			Lumit:clean (process.argv[2])
 		elseif a0 == "search" or a0 == "-s" then
 			Lumit:search (process.argv[2])
+		elseif a0 == "upgrade" or a0 == "-u" then
+			Lumit.UPDATE = true
+			Lumit:upgrade (process.argv[2])
 		elseif a0 == "install" or a0 == "-i" then
 			Lumit:install (process.argv[2])
 		elseif a0 == "deploy" or a0 == "-D" then
 			Lumit:deploy (process.argv[2])
 		elseif a0 == "remove" or a0 == "rm" or a0 == "-r" then
 			Lumit:uninstall (process.argv[2])
-		elseif a0 == "-u" or a0 == "update" then
-			Lumit:update ()
+		elseif a0 == "-S" or a0 == "sync" then
+			Lumit:sync ()
 		elseif a0 == "list" or a0 == "-l" or a0 == "ls" then
 			Lumit:list ()
 		elseif a0 == "help" or a0 == "-h" then
 			show_help ()
 		elseif a0 == "info" or a0 == "-I" then
 			Lumit:info (process.argv[2], function (pkg)
-				p ("PKG", pkg)
+				if not pkg then
+					p ("Module is not installed")
+				else
+					p (process.argv[2], pkg)
+				end
 			end)
+		elseif a0 == "push" or a0 == "-p" then
+			local System = require ("lumit/System")
+			local argv2 = process.argv[2] or ""
+			local x = "lum -j "..argv2.." |tee /tmp/"..Lumit.USER.."; "..
+				Lumit.PUSH:gsub("$0", "/tmp/"..Lumit.USER)
+			p ("PUSH", x)
+			System.cmd (x)
 		elseif a0 == "json" or a0 == "-j" then
 			print ("[")
-			if process.argv[2] then
-				local dir = process.argv[2]
-				if not (dir:sub(1,1) == "/") then
-					dir = process.cwd ().."/"..dir
+			local argv2 = process.argv[2] or ""
+			local dir = argv2
+			if not (dir:sub (1,1) == "/") then
+				dir = process.cwd ().."/"..dir
+			end
+			local ctr = 1
+			if FS.exists_sync (dir.."/package.lua") then
+				ctr = 0
+			end
+			showjson (dir, function (x)
+				if x then 
+					if ctr == 0 then 
+						print (x)
+						print ("]")
+						return
+					else
+						print (x..",")
+					end
+				else
+					if ctr == 0 then 
+						print ("]")
+						return
+					end
 				end
 				FS.readdir (dir, function (err, files)
 					if err then
@@ -177,24 +221,24 @@ FS.read_file (home.."/.lum/config", function (err, data)
 					end
 					local ctr = #files
 					for i=1,#files do
-						showjson (dir.."/"..files[i].."/package", function (x)
+						showjson (dir.."/"..files[i], function (x)
 							ctr = ctr-1
-							if not x then return end
-							if ctr == 0 then 
-								print (x)
-								print ("]")
+							if x then
+								if ctr == 0 then 
+									print (x)
+									print ("]")
+								else
+									print (x..",")
+								end
 							else
-								print (x..",")
+								if ctr == 0 then 
+									print ("]")
+								end
 							end
 						end)
 					end
 				end)
-			else
-				showjson (nil, function (x)
-					print (x)
-					print ("]")
-				end)
-			end
+			end)
 		else
 			p ("ERROR", "Unknown argument: ".. a0)
 		end
@@ -202,19 +246,31 @@ FS.read_file (home.."/.lum/config", function (err, data)
 end)
 
 function showjson(path, fn)
-	Lumit:info (path, function (pkg)
-		if not pkg then 
-			fn (nil)
-			return
+	if path then
+		if not (path:sub(1,1) == "/") then
+			path = process.cwd().."/"..path
 		end
-		local j = {}
-		j.name = pkg.name
-		j.version = pkg.version
-		j.description = pkg.description
-		getsource (function (err, t, u)
-			j['type'] = t
-			j['url'] = u
-			fn (JSON.encode (j))
+	else
+		path = process.cwd().."/"
+	end
+
+	if FS.exists_sync (path.."/package.lua") then
+		Lumit:info (path.."/package", function (pkg)
+			if not pkg then 
+				fn (nil)
+				return
+			end
+			local j = {}
+			j.name = pkg.name
+			j.version = pkg.version
+			j.description = pkg.description
+			getsource (path, function (err, t, u)
+				j['type'] = t
+				j['url'] = u
+				fn (JSON.encode (j))
+			end)
 		end)
-	end)
+	else
+		fn (nil)
+	end
 end

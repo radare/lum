@@ -4,31 +4,16 @@ Lum is the Luvit Module utility for installing dependencies for your projects.
 
 This tool is implemented in a module named 'lumit'. The commandline tool is named 'lum'
 
-	$ lum -h
-	lum - luvit modules
-
-	 Actions:
-	    -d, deps             fetch, build and install all dependencies
-	    -b, build            compile module
-	    -c, clean            clean module
-	    -D, deploy [path]    install current package into destination
-	    -i, install [pkg]    install given package
-	    -r, remove [pkg]     alias for 'lum rm' (uninstall package)
-	    -I, info             pretty print ./package.lua
-	    -l, ls, list         alias for 'ls'. list all installed packages
-
-	 Package repository:
-	    -s, search [str]     search in pkg database
-	    -j, json             create json from current package
-	    -p, push [json]      push json file to remove repository
-	    -u, update           update local database from remote repositories
-
-	 Environment and ~/.lum/config:
-	    CC, CFLAGS, LDFLAGS, LUA_DIR, LUVIT_DIR, USER, REPOS
-
 Repositories
 ------------
-WIP: The plan is to make pkg.luvit.io the default repository for luvit modules.
+A repository is just an URL pointing to a JSON file containing the packages information.
+	echo REPOS=http://lolcathost.org/lum/pancake >> ~/.lum/config
+
+	lum -S       # fetch repositories into ~/.lum/db
+	lum -s sdb   # search for 'sdb' into the database
+
+Packages
+--------
 
 Type of packages
 ----------------

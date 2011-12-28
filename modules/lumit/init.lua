@@ -7,15 +7,20 @@ local FS = require ("fs")
 
 local Lumit = {}
 
-function Lumit.update(self)
-	-- TODO get database 
-end
-
-function Lumit.fetch(self, pkg)
-	-- fetch repository
-end
-
 local string = require ("string")
+
+function Lumit.upgrade (self, k)
+	if not k then
+		System.cmd ("echo pop")
+	else
+		Lumit:uninstall (k, function ()
+			Lumit:clean(k, function ()
+				Lumit:install(k)
+			end)
+		end)
+	end
+end
+
 function Lumit.search (self, k)
 	DB.open (function (db)
 		db:search (k, function (u,x)
@@ -27,11 +32,13 @@ function Lumit.search (self, k)
 end
 
 function Lumit.init (self, fn)
+	Lumit.UPDATE = false
 	Lumit.CWD = process.cwd ()
 	Lumit.REPOS = process.env["REPOS"] or nil
 	Lumit.HOME = process.env["HOME"] or "/tmp"
 	Lumit.MAKE = process.env["MAKE"] or "make"
-	Lumit.USER = process.env["MAKE"] or "anonymous"
+	Lumit.USER = process.env["USER"] or "anonymous"
+	Lumit.PUSH = process.env["PUSH"] or "scp $0 user@host.org"
 	Lumit.CC = process.env["CC"] or "gcc -arch i386"
 	Lumit.LUVIT_DIR = process.env["LUVIT_DIR"] or ""
 	Lumit.LUA_DIR = process.env["LUA_DIR"]
@@ -48,11 +55,24 @@ function Lumit.init (self, fn)
 	end)
 end
 
-function Lumit.clean(self, nextfn)
-	if FS.exists_sync ("Makefile") then
-		System.cmd (Lumit.MAKE.." clean", function (ret)
+function Lumit.clean(self, pkg, nextfn)
+	if pkg then
+		-- XXX. must cd + lum imho
+		if FS.exists_sync ("_build/"..pkg.."/Makefile") then
+			System.cmd ("cd _build/"..pkg.." ; "..Lumit.MAKE.." clean", function (ret)
+				if nextfn then nextfn (self) end
+			end)
+		else
 			if nextfn then nextfn (self) end
-		end)
+		end
+	else
+		if FS.exists_sync ("Makefile") then
+			System.cmd (Lumit.MAKE.." clean", function (ret)
+				if nextfn then nextfn (self) end
+			end)
+		else
+			if nextfn then nextfn (self) end
+		end
 	end
 end
 
@@ -64,12 +84,11 @@ function Lumit.build_dep(self, pkg, nextfn)
 		repo = pkg:sub (at+1)
 		pkg = pkg:sub (0, at-1)
 	end
-	p ("PKG", pkg)
-	p ("REPO", repo)
 	if FS.exists_sync ("./modules/"..pkg) then
 		-- p ("module "..pkg.." already installed")
 		return
 	end
+	p ("=> Installing dependency "..pkg)
 	DB.open (function (db)
 	db:find (pkg, repo, function (u, x)
 		if not x then 
@@ -80,10 +99,20 @@ function Lumit.build_dep(self, pkg, nextfn)
 		local wrkname = wrkdir.."/"..x.name
 		-- print ("==> "..u.." : "..x.name)
 		if FS.exists_sync (wrkname) then
+			local cmd = ""
+			if Lumit.UPDATE then
+				if x.type == "git" then
+					p ("=> Updating from git...")
+					cmd = "git pull ; "
+				elseif x.type == "hg" then
+					p ("=> Updating from hg...")
+					cmd = "hg pull -u ; "
+				end
+			end
 			-- p ("Already installed: "..pkg)
-			cmd =   "cd "..wrkdir.."/"..x.name.." ; "..
+			cmd = cmd.."cd "..wrkdir.."/"..x.name.." ; "..
 				"lum && lum deploy '"..self.CWD.."'"
-			p (cmd)
+	--		p (cmd)
 			System.cmd (cmd, function (cmd, err)
 				if err>0 then
 					p ("ERROR", cmd)
@@ -135,42 +164,41 @@ function Lumit.build(self, nextfn)
 	end
 	-- C preprocessor flags
 --	path = "/usr/"
-	System.cmdstr ("luvit-config --cflags", function(x,y)
-		
-	local cflags = "-I"..path
-	if not err then
-		cflags = y
-	end
+	System.cmdstr ("luvit-config --cflags", function (x,y)
+		local cflags = "-I"..path
+		if not err then
+			cflags = y
+		end
 
-	-- linker flags
-	local ldflags = ""
-	if Lumit.UNAME == "Darwin i386" then
-		ldflags = "-dynamiclib -undefined dynamic_lookup"
-		--ldflags = "-dynamiclib" -- -undefined dynamic_lookup"
---		ldflags = ldflags.." "..Lumit.LUVIT_DIR.."/deps/luajit/src/libluajit.a"
-		-- ldflags = "-dynamic -fPIC"
-	else
-		-- ldflags = "-dynamiclib -undefined dynamic_lookup"
-		ldflags = "-shared -fPIC"
-	end
+		-- linker flags
+		local ldflags = ""
+		if Lumit.UNAME == "Darwin i386" then
+			ldflags = "-dynamiclib -undefined dynamic_lookup"
+			--ldflags = "-dynamiclib" -- -undefined dynamic_lookup"
+	--		ldflags = ldflags.." "..Lumit.LUVIT_DIR.."/deps/luajit/src/libluajit.a"
+			-- ldflags = "-dynamic -fPIC"
+		else
+			-- ldflags = "-dynamiclib -undefined dynamic_lookup"
+			ldflags = "-shared -fPIC"
+		end
 
-	if FS.exists_sync ("Makefile") then
-		local cmd = 
-			" CC='"..self.CC.."'"..
-			" CFLAGS='"..cflags.."'"..
-			" LDFLAGS='"..ldflags.."'"..
-			" LUA_DIR='"..path.."' "..Lumit.MAKE
-		-- p(cmd)
-		System.cmd (cmd, function (cmd, err)
-			if err>0 then
-				print ("exit with "..err)
-				process.exit (err)
-			end
+		if FS.exists_sync ("Makefile") then
+			local cmd = 
+				" CC='"..self.CC.."'"..
+				" CFLAGS='"..cflags.."'"..
+				" LDFLAGS='"..ldflags.."'"..
+				" LUA_DIR='"..path.."' "..Lumit.MAKE
+			-- p(cmd)
+			System.cmd (cmd, function (cmd, err)
+				if err>0 then
+					print ("exit with "..err)
+					process.exit (err)
+				end
+				if nextfn then nextfn (self) end
+			end)
+		else
 			if nextfn then nextfn (self) end
-		end)
-	else
-		if nextfn then nextfn (self) end
-	end
+		end
 	end)
 end
 
@@ -190,11 +218,17 @@ function Lumit.uninstall(self, pkg, nextfn)
 		print ("Usage: lum uninstall [pkg]")
 		process.exit (1)
 	end
-	local cmd = "rm -rf modules/"..pkg
-	p ("RUNCMD", cmd)
-	System.cmd (cmd, function (err)
+	
+	local f = "modules/"..pkg
+	if FS.exists_sync (f) then
+		local cmd = "rm -rf "..f
+		System.cmd (cmd, function (err)
+			if nextfn then nextfn (err) end
+		end)
+	else
+		p ("ERROR", "Module "..pkg.." is not installed")
 		if nextfn then nextfn (err) end
-	end)
+	end
 end
 
 function Lumit.install(self, pkg, nextfn)
@@ -249,6 +283,9 @@ end
 function Lumit.info(self, pkg, nextfn)
 	local ok, deps 
 	if pkg then
+		--if not (pkg:sub(1,1) == "/") then
+		--	pkg = process.cwd ().."/modules/"..pkg.."/package"
+		--end
 		ok, deps = pcall (require, pkg) 
 	else
 		ok, deps = pcall (require, process.cwd ()..'/package')
@@ -256,7 +293,7 @@ function Lumit.info(self, pkg, nextfn)
 	if ok then 
 		if nextfn then nextfn (deps) end
 	else
-		-- p ("ERROR", deps)
+		p ("ERROR", deps)
 		if nextfn then nextfn (nil) end
 		-- process.exit (1)
 	end
@@ -264,7 +301,8 @@ end
 
 function Lumit.list(self)
 	-- TODO: show package.lua info
-	System.cmd ("ls modules/")
+	-- TODO: rewrite in pure lua
+	System.cmd ("ls modules/*/package.lua | cut -d / -f 2")
 end
 
 function Lumit.json(self, pkg, fn)
@@ -285,7 +323,7 @@ function Lumit.json(self, pkg, fn)
 	end)
 end
 
-function Lumit.update(self, fn)
+function Lumit.sync(self, fn)
 	if not Lumit.REPOS then
 		p ("ERROR", "undefined REPOS")
 		process.exit (1)

@@ -7,6 +7,7 @@ return {
     "json",
     "template",
     "irc"
---, "sdb"
+, "sdb"
+, "crypto"
   },
 }
