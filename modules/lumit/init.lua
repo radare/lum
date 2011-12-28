@@ -110,8 +110,8 @@ function Lumit.build_dep(self, pkg, nextfn)
 				end
 			end
 			-- p ("Already installed: "..pkg)
-			cmd = cmd.."cd "..wrkdir.."/"..x.name.." ; "..
-				"lum && lum deploy '"..self.CWD.."'"
+			cmd = "cd "..wrkdir.."/"..x.name.." ; "..
+				cmd.."lum && lum deploy '"..self.CWD.."'"
 	--		p (cmd)
 			System.cmd (cmd, function (cmd, err)
 				if err>0 then
