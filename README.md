@@ -20,3 +20,8 @@ lum -p ..  # push all repos found in ..
 Modules
 -------
 
+
+TODO
+----
+support for ./init.lua
+support for ... 

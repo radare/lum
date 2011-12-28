@@ -190,7 +190,7 @@ function Lumit.build(self, nextfn)
 		if FS.exists_sync ("Makefile") then
 			local cmd = 
 				" CC='"..self.CC.."'"..
-				" CFLAGS='"..cflags.."'"..
+				" CFLAGS='-w "..cflags.."'"..
 				" LDFLAGS='"..ldflags.."'"..
 				" LUA_DIR='"..path.."' "..Lumit.MAKE
 			-- p(cmd)
