@@ -56,21 +56,21 @@ function DB.open (fn)
 	FS.readdir (lumdir, function (err, files)
 		if err then
 			p ("ERROR", "readdir ~/.lum/db is empty")
-			return -- process.exit (1)
-		end
-		local ctr = #files
-		for i=1,#files do
-			if not (files[i]:sub(1,1) == ".") then
-				local j = slurp (lumdir.."/"..files[i])
-				local a, b = pcall (JSON.decode, j)
-				if a then
-					t.db[files[i]] = b --JSON.decode (j)
-				else
-					p (lumdir.."/"..files[i], b)
+			print ("  REPOS=http://lolcathost.org/lum/pancake lum -S")
+		else
+			local ctr = #files
+			for i=1,#files do
+				if not (files[i]:sub(1,1) == ".") then
+					local j = slurp (lumdir.."/"..files[i])
+					local a, b = pcall (JSON.decode, j)
+					if a then
+						t.db[files[i]] = b --JSON.decode (j)
+					else
+						p (lumdir.."/"..files[i], b)
+					end
 				end
 			end
 		end
-
 		t.find = function (self, x, r, fn)
 			if not x then return end
 			for k,v in pairs (t.db) do
