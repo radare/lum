@@ -227,8 +227,10 @@ end
 function Lumit.deps(self, nextfn)
 	local ok, pkg = pcall (require, process.cwd ()..'/package')
 	-- name=url -- implicit source
-	for k, v in pairs(pkg.dependencies) do
-		self:build_dep_implicit (k, v)
+	for k, v in pairs (pkg.dependencies) do
+		if not (type (k) == "number") then
+			self:build_dep_implicit (k, v)
+		end
 	end
 	-- name -- database repo
 	if ok and #pkg.dependencies>0 then
