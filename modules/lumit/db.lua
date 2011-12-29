@@ -55,8 +55,8 @@ function DB.open (fn)
 	local lumdir = process.env["HOME"] .. "/.lum/db"
 	FS.readdir (lumdir, function (err, files)
 		if err then
-			p ("ERROR", "readdir")
-			process.exit (1)
+			p ("ERROR", "readdir ~/.lum/db is empty")
+			return -- process.exit (1)
 		end
 		local ctr = #files
 		for i=1,#files do

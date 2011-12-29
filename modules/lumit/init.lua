@@ -44,19 +44,27 @@ function Lumit.init (self, fn)
 	Lumit.MAKE = process.env["MAKE"] or "make"
 	Lumit.USER = process.env["USER"] or "anonymous"
 	Lumit.PUSH = process.env["PUSH"] or "scp $0 user@host.org"
-	Lumit.CC = process.env["CC"] or "gcc -arch i386"
 	Lumit.LUVIT_DIR = process.env["LUVIT_DIR"] or ""
 	Lumit.LUA_DIR = process.env["LUA_DIR"]
-	if not Lumit.LUA_DIR and Lumit.LUVIT_DIR then
-		Lumit.LUA_DIR = Lumit.LUVIT_DIR.."/deps/luajit/src"
-	end
-	System.cmdstr ("uname -ms", function (err, os)
-		if err>0 then
-			Lumit.UNAME = "Unknown"
-		else
-			Lumit.UNAME = os
-		end
-		if fn then fn () end
+	System.cmdstr ("luvit-config --cflags|cut -d ' ' -f 1| cut -c 3-", function (err, x)
+		Lumit.LUVIT_DIR = x
+		Lumit.LUA_DIR = x.."/luajit"
+		--if not Lumit.LUA_DIR and Lumit.LUVIT_DIR then
+		--	Lumit.LUA_DIR = Lumit.LUVIT_DIR.."/deps/luajit/src"
+		--end
+		System.cmdstr ("uname -ms", function (err, os)
+			if err>0 then
+				Lumit.UNAME = "Unknown"
+			else
+				Lumit.UNAME = os
+			end
+			local HOST_CC = "gcc"
+			if Lumit.UNAME == "Darwin i386" then
+				HOST_CC = "gcc -arch i386"
+			end
+			Lumit.CC = process.env["CC"] or HOST_CC
+			if fn then fn () end
+		end)
 	end)
 end
 
@@ -166,13 +174,14 @@ function Lumit.build_dep(self, pkg, nextfn)
 end
 
 function Lumit.build(self, nextfn)
-	local path = self.LUVIT_DIR or self.LUA_DIR or ""
+	local path = self.LUA_DIR or self.LUVIT_DIR.."/luajit" or ""
 	if not FS.exists_sync (path.."/lua.h") then
-		path = path.."/deps/luajit/src"
+		p ("Cannot found in "..path)
+		--path = path.."/deps/luajit/src"
 		if not FS.exists_sync (path.."/lua.h") then
-			p ("ERROR", "Cannot find lua.h in LUVIT_DIR ("..self.LUVIT_DIR..")")
+	--		p ("ERROR", "Cannot find lua.h in LUVIT_DIR ("..self.LUVIT_DIR..")")
 			p ("INFO", "Fill your ~/.lum/config with KEY=VALUE lines")
-			process.exit (1)
+	--		process.exit (1)
 		end
 	end
 	-- C preprocessor flags
