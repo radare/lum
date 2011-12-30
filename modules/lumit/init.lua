@@ -6,6 +6,7 @@ local DB = require ("./db")
 local FS = require ("fs")
 
 local Lumit = {}
+Lumit.WRKDIR = "_lumwrk"
 
 local string = require ("string")
 
@@ -71,8 +72,8 @@ end
 function Lumit.clean(self, pkg, nextfn)
 	if pkg then
 		-- XXX. must cd + lum imho
-		if FS.exists_sync ("_build/"..pkg.."/Makefile") then
-			System.cmd ("cd _build/"..pkg.." ; "..Lumit.MAKE.." clean", function (ret)
+		if FS.exists_sync (Lumit.WRKDIR..pkg.."/Makefile") then
+			System.cmd ("cd "..Lumit.WRKDIR.."/"..pkg.." ; "..Lumit.MAKE.." clean", function (ret)
 				if nextfn then nextfn (self) end
 			end)
 		else
@@ -90,15 +91,24 @@ function Lumit.clean(self, pkg, nextfn)
 end
 
 function Lumit.build_dep_implicit(self, pkg, url, nextfn)
-	p("TODO: implicit dep installer", pkg, url)
---	local c = "wget --no-check-certificate "..url
---	unzip pkg
---	lum
---	lum install
+	p ("TODO: implicit dep installer", pkg, url)
+	local wdpkg = Lumit.WRKDIR.."/"..pkg
+	local c = "mkdir -p "..wdpkg
+	System.cmd (c, function (out, err)
+		local c = "wget -q -c -O "..wdpkg..".zip --no-check-certificate '"..url.."'"
+		System.cmd (c, function (out, err)
+			-- if err then process.exit (1) end
+			c = "mkdir -p "..wdpkg.." ; cd "..wdpkg.." ; unzip -o ../"..pkg..".zip"
+			System.cmd (c, function (out, err)
+				if err then p ("error: "..c) end
+				p ("wrkdone")
+			end)
+		end)
+	end)
 end
 
 function Lumit.build_dep(self, pkg, nextfn)
-	local wrkdir = self.CWD.."/_build"
+	local wrkdir = self.CWD.."/"..Lumit.WRKDIR
 	local at = pkg:find ('@')
 	local repo = nil
 	if at then
@@ -227,16 +237,18 @@ end
 function Lumit.deps(self, nextfn)
 	local ok, pkg = pcall (require, process.cwd ()..'/package')
 	-- name=url -- implicit source
-	for k, v in pairs (pkg.dependencies) do
-		if not (type (k) == "number") then
-			self:build_dep_implicit (k, v)
+	if pkg.dependencies then
+		for k, v in pairs (pkg.dependencies) do
+			if not (type (k) == "number") then
+				self:build_dep_implicit (k, v)
+			end
 		end
-	end
-	-- name -- database repo
-	if ok and #pkg.dependencies>0 then
-		for i = 1, #pkg.dependencies do
-			p ("---> ",pkg.dependencies[i])
-			self:build_dep (pkg.dependencies[i])
+		-- name -- database repo
+		if ok and #pkg.dependencies>0 then
+			for i = 1, #pkg.dependencies do
+				p ("---> ",pkg.dependencies[i])
+				self:build_dep (pkg.dependencies[i])
+			end
 		end
 	end
 	if nextfn then nextfn (not ok) end
