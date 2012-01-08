@@ -91,6 +91,7 @@ function Lumit.clean(self, pkg, nextfn)
 end
 
 function Lumit.build_dep_implicit(self, pkg, url, nextfn)
+	-- TODO: add support for tar.{gz,xz,bz2}
 	p ("TODO: implicit dep installer", pkg, url)
 	local wdpkg = Lumit.WRKDIR.."/"..pkg
 	local c = "mkdir -p "..wdpkg
@@ -352,7 +353,9 @@ end
 function Lumit.list(self)
 	-- TODO: show package.lua info
 	-- TODO: rewrite in pure lua
-	System.cmd ("ls modules/*/package.lua | cut -d / -f 2")
+	if FS.exists_sync ("modules") then
+		System.cmd ("ls modules/*/package.lua | cut -d / -f 2")
+	end
 end
 
 function Lumit.json(self, pkg, fn)

@@ -32,9 +32,11 @@ local dbinternal = [[
   { "name": "crypto", "type": "git", "url": "git://github.com/radare/crypto",
     "version": "0.1", "description": "openssl crypto api", "author": "pancake" },
   { "name": "template", "type": "git", "url": "git://github.com/radare/luvit-template",
-    "version": "0.1", "description": "template module", "author": "pancake" }
+    "version": "0.1", "description": "template module", "author": "pancake" },
   { "name": "kernel", "type": "git", "url": "git://github.com/luvit/kernel.git",
-    "version": "0.0.1", "description": "A simple async template language similar to dustjs and mustache (ported from c9/kernel)", "author": "creationx" }
+    "version": "0.0.1", "description": "A simple async template language similar to dustjs and mustache (ported from c9/kernel)", "author": "creationx" },
+  { "name": "curl", "type": "git", "url": "git://github.com/luvit/curl.git",
+    "version": "0.0.1", "description": "HTTP request for Luvit", "author": "dvv" } 
 ]
 ]]
 
