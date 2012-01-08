@@ -292,11 +292,20 @@ function Lumit.deploy(self, path, nextfn)
 			process.exit (1)
 		end
 		local pkgname = pkg['name']
-		local cmd =
-			-- "ls modules/"..pkgname.."/ ; "..
-			"mkdir -p '"..path.."/modules/"..pkgname.."'\n"..
-			"cp -f package.lua '"..path.."/modules/"..pkgname.."'\n"..
-			"cp -f modules/"..pkgname.."/* '"..path.."/modules/"..pkgname.."'"
+		local cmd = ""
+		if pkg['main'] then
+			cmd =
+				-- "ls modules/"..pkgname.."/ ; "..
+				"mkdir -p '"..path.."/modules/"..pkgname.."'\n"..
+				"cp -f package.lua '"..path.."/modules/"..pkgname.."'\n"..
+				"cp -f '"..pkg['main'].."' '"..path.."/modules/"..pkgname.."/init.lua'"
+		else
+			cmd =
+				-- "ls modules/"..pkgname.."/ ; "..
+				"mkdir -p '"..path.."/modules/"..pkgname.."'\n"..
+				"cp -f package.lua '"..path.."/modules/"..pkgname.."'\n"..
+				"cp -f modules/"..pkgname.."/* '"..path.."/modules/"..pkgname.."'"
+		end
 		-- TODO: copy binaries using luvit-fsutils
 		-- p ("--->"..cmd)
 		print (cmd)
@@ -354,6 +363,7 @@ function Lumit.json(self, pkg, fn)
 	end
 	local j = {}
 	j.name = pkg.name
+	j.main = pkg.main
 	j.version = pkg.version
 	j.description = pkg.description
 	j.url = "url"
