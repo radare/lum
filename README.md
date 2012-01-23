@@ -23,15 +23,18 @@ Configuration
 	$ cat ~/.lum/config
 	MAKE=make
 	#CC=clang
+	#CC=gcc -arch i386 # osx
 	REPOS=http://lolcathost.org/lum/pancake
 	PUSH=scp $0 user@host.org:/srv/http/lum
 
 Installing packages
 -------------------
 install luvit 'irc' module in modules/. this package is looked up in the repository (see -s and -S for more information)
+
 	$ lum -i irc
 
 install a luvit dist package:
+
 	$ lum -i irc-0.1.zip
 
 Lum packages
@@ -44,7 +47,8 @@ Lum uses ./package.lua and looks to satisfy the dependencies for it. Running 'lu
 
 Repositories
 ------------
-A repository is just an URL pointing to a JSON file containing the packages information.
+Lum packages can be found in zip files or in remote servers stored into repositories.
+A repository is just an URL pointing to a JSON file containing the package retrival information.
 	echo REPOS=http://lolcathost.org/lum/pancake >> ~/.lum/config
 
 	lum -S       # fetch repositories into ~/.lum/db
@@ -53,8 +57,25 @@ A repository is just an URL pointing to a JSON file containing the packages info
 
 How to create your repository
 -----------------------------
-	lum -j     # show json from packages in current directory
-	lum -p ..  # push all repos found in ..
+Maybe you have some cool luvit modules you want to share.
+
+Go to the directory of your package.. or the upper directory where all your luvit modules are found and type 'lum -j'.
+
+The 'lum -j' command (or 'lum json') will print the repository json file.
+
+Now you need to publish this json file, if you are rude and you prefer to do it manually just type:
+
+	lum -j > /tmp/$USER
+	scp /tmp/$USER yourhost:/wwwpath/lum
+
+Lum provides an standard way to share your repositories:
+
+	lum push [path]
+
+The path argument can be a JSON file or a directory containint one or many luvit modules.
+
+This command uses the PUSH variable of your ~/.lum/config (see Configuration)
+
 Usage
 -----
 	$ lum -h
