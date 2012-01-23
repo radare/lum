@@ -31,15 +31,32 @@ Installing packages
 -------------------
 install luvit 'irc' module in modules/. this package is looked up in the repository (see -s and -S for more information)
 
-	$ lum -i irc
+	lum -i irc
 
 install a luvit dist package:
 
-	$ lum -i irc-0.1.zip
+	lum -i irc-0.1.zip
+
+You can also specify more than one package
+
+	lum -i irc sdb
+
+Listing and removing packages is done with these commands:
+
+	lum -l
+	lum -r irc sdb
+
+To purge the package remove
+
+	lum -r `lum -l`
+	rm -rf _lumwrk
 
 Lum packages
 ------------
-Use 'lum dist' to create a package
+A lum package is a zip file containing the distribution form of a luvit module.
+This command creates a zip package of the module of current directory.
+
+	lum dist
 
 Dependencies
 ------------
