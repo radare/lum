@@ -1,4 +1,4 @@
--- copyleft -- 2011 -- pancake<nopcode.org> --
+-- copyleft -- 2011-2012 -- pancake<nopcode.org> --
 
 local System = require ("./system")
 local Stack = require ("./stack")
@@ -41,6 +41,8 @@ function Lumit.search (self, k)
 end
 
 function Lumit.init (self, fn)
+	if Lumit.is_init then return end
+	Lumit.is_init = true
 	Lumit.UPDATE = false
 	Lumit.CWD = process.cwd ()
 	Lumit.REPOS = process.env["REPOS"] or nil
@@ -208,7 +210,9 @@ function Lumit.dist(self, nextfn)
 	local p = require (self.CWD.."/package.lua")
 	-- if -d .git
 	local d = p.name.."-"..p.version
-	local cmd = "rm -f "..d..".zip ; git clone . "..d.." ; cp -rf modules "..d.."/ ; rm -rf "..d.."/.git* ; zip -mr "..d..".zip "..d
+	local cmd = "rm -f "..d..".zip ; git clone . "..d.." ; "..
+		"[ -d modules ] && cp -rf modules "..d.."/ ; "..
+		"rm -rf "..d.."/.git* ; zip -mr "..d..".zip "..d
 	System.cmd (cmd, nextfn)
 end
 
@@ -225,7 +229,7 @@ function Lumit.build(self, nextfn)
 	end
 	-- C preprocessor flags
 --	path = "/usr/"
-	System.cmdstr ("luvit-config --cflags", function (x,y)
+	System.cmdstr ("luvit-config --cflags", function (err, y)
 		local cflags = "-I"..path
 		if not err then
 			cflags = y
@@ -233,23 +237,25 @@ function Lumit.build(self, nextfn)
 
 		-- linker flags
 		local ldflags = ""
+		if Lumit.UNAME == "" then
+			p("XXX", "UNAME is null, and this will fail")
+			return
+		end
 		if Lumit.UNAME == "Darwin i386" then
 			ldflags = "-dynamiclib -undefined dynamic_lookup"
-			--ldflags = "-dynamiclib" -- -undefined dynamic_lookup"
-	--		ldflags = ldflags.." "..Lumit.LUVIT_DIR.."/deps/luajit/src/libluajit.a"
 			-- ldflags = "-dynamic -fPIC"
 		else
-			-- ldflags = "-dynamiclib -undefined dynamic_lookup"
 			ldflags = "-shared -fPIC"
 		end
 
+		p("ldflags", ldflags)
 		if FS.exists_sync ("Makefile") then
 			local cmd = 
 				" CC='"..self.CC.."'"..
 				" CFLAGS='-w "..cflags.."'"..
 				" LDFLAGS='"..ldflags.."'"..
 				" LUA_DIR='"..path.."' "..Lumit.MAKE
-			-- p(cmd)
+			p(cmd)
 			System.cmd (cmd, function (cmd, err)
 				if err>0 then
 					print ("exit with "..err)
@@ -452,6 +458,9 @@ function Lumit.push(self, fn)
 	local d = "/tmp/_lumwrk."..Math.floor (Math.random()*1000000)
 	process = require ("process")
 	-- TODO: this is not yet implemented in luvit!
+	UV.activate_signal_handler (2, function (x)
+		p("OWN YEAH")
+	end)
 	if process.on then
 		process:on ("SIGINT", function (x) 
 			p ("SIGINT")

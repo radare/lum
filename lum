@@ -166,11 +166,19 @@ FS.read_file (home.."/.lum/config", function (err, data)
 			Lumit.UPDATE = true
 			Lumit:upgrade (process.argv[2])
 		elseif a0 == "install" or a0 == "-i" then
-			Lumit:install (process.argv[2])
+			local i = 2
+			while process.argv[i] do
+				Lumit:install (process.argv[i])
+				i = i + 1
+			end
 		elseif a0 == "deploy" or a0 == "-D" then
 			Lumit:deploy (process.argv[2])
 		elseif a0 == "remove" or a0 == "rm" or a0 == "-r" then
-			Lumit:uninstall (process.argv[2])
+			local i = 2
+			while process.argv[i] do
+				Lumit:uninstall (process.argv[i])
+				i = i + 1
+			end
 		elseif a0 == "-S" or a0 == "sync" then
 			Lumit:sync ()
 		elseif a0 == "list" or a0 == "-l" or a0 == "ls" then

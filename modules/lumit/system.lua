@@ -15,18 +15,28 @@ function System.cmd(line, fn)
 	-- child.stdin:close()
 end
 
+-- XXX: this is not paralelizable coz str
 function System.cmdstr(line, fn)
 	local str = ""
-	local child = require('process').spawn('/bin/sh', {'-c', line}, {})
-	child.stdout:on('data', function(data)
+	local fini = nil
+	local child = require ('process').spawn ('/bin/sh', {'-c', line}, {})
+	child.stdout:on ('data', function (data)
 		str = str..data
+		if fn then
+			fn (0, str:sub (1, #str-1))
+			fn = nil
+		end
 	end)
-	child.stderr:on('data', function(data)
-	  print(data)
+	child.stderr:on ('data', function (data)
+		p (data)
 	end)
-	child:on('exit', function (exit_status, term_signal)
-		if fn then fn (exit_status, str:sub(1,#str-1)) end
-	end)
+	--child:on ('exit', function (exit_status, term_signal)
+	--	fini = exit_status
+--p ("cmdstr: ", line, str)
+		--if str ~= "" then
+		--	fn (exit_status, str:sub (1, #str-1))
+		--end
+	--end)
 	--child.stdin:write(makefile)
 	--child.stdin:close()
 end
