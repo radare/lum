@@ -1,12 +1,15 @@
 #!/usr/bin/env luvit
 
+local FS = require ("fs")
+local JSON = require ("json")
 local Lumit = require ("lumit")
+
 Lumit.VERSION = "0.3"
 
 -- TODO dist                 create a distribution tarball of this package
 function show_help()
 	print [[
-lum - luvit modules
+lum - luvit module manager
 
  Package:
     -b, build            compile module
@@ -55,8 +58,6 @@ function split(str, pat)
 end
 
 -- TODO: move outside!
-local FS = require ("fs")
-local JSON = require ("lumit/json")
 function getsource(path, fn)
 	if not path then path = "." end
 	--p("getsource", path)
@@ -243,6 +244,7 @@ FS.read_file (home.."/.lum/config", function (err, data)
 	end)
 end)
 
+-- XXX: dupped in modules/lumit/init.lua at Lumit:json()
 function showjson(path, fn)
 	if path then
 		if not (path:sub(1,1) == "/") then
@@ -265,7 +267,7 @@ function showjson(path, fn)
 			getsource (path, function (err, t, u)
 				j['type'] = t
 				j['url'] = u
-				fn (JSON.encode (j))
+				fn (JSON.stringify (j))
 			end)
 		end)
 	else

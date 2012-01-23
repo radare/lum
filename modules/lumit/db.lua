@@ -1,4 +1,4 @@
-local JSON = require ("./json")
+local JSON = require ("json")
 local FS = require ("fs")
 
 -- helper
@@ -52,7 +52,7 @@ function DB.open (fn)
 	t.db["internal"] = dbinternal
 
 	for k,v in pairs (t.db) do
-		local j = JSON.decode (t.db[k])
+		local j = JSON.parse (t.db[k], {use_null=true})
 		t.db[k] = j
 	end
 
@@ -63,10 +63,10 @@ function DB.open (fn)
 			print ("  REPOS=http://lolcathost.org/lum/pancake lum -S")
 		else
 			local ctr = #files
-			for i=1,#files do
+			for i=1, #files do
 				if not (files[i]:sub(1,1) == ".") then
 					local j = slurp (lumdir.."/"..files[i])
-					local a, b = pcall (JSON.decode, j)
+					local a, b = pcall (JSON.parse, j)
 					if a then
 						t.db[files[i]] = b --JSON.decode (j)
 					else

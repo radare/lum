@@ -361,6 +361,7 @@ function Lumit.list(self)
 	end
 end
 
+-- XXX: dupped in lum?
 function Lumit.json(self, pkg, fn)
 	if not pkg then
 		pkg = require (pkg)
@@ -376,7 +377,7 @@ function Lumit.json(self, pkg, fn)
 	getsource (function (err, t, u)
 		j['type'] = t
 		j.url = u
-		print (JSON.encode (j))
+		print (JSON.stringify (j))
 	end)
 end
 
