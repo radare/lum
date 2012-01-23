@@ -4,6 +4,9 @@ local System = require ("./system")
 local Stack = require ("./stack")
 local DB = require ("./db")
 local FS = require ("fs")
+local UV = require('uv')
+local Math = require ("math")
+local OS = require ("os")
 
 local Lumit = {}
 Lumit.WRKDIR = "_lumwrk"
@@ -60,9 +63,9 @@ function Lumit.init (self, fn)
 				Lumit.UNAME = os
 			end
 			local HOST_CC = "gcc"
-			if Lumit.UNAME == "Darwin i386" then
-				HOST_CC = "gcc -arch i386"
-			end
+			--if Lumit.UNAME == "Darwin i386" then
+			--	HOST_CC = "gcc -arch i386"
+			--end
 			Lumit.CC = process.env["CC"] or HOST_CC
 			if fn then fn () end
 		end)
@@ -384,11 +387,11 @@ function Lumit.sync(self, fn)
 	end
 	local dir = Lumit.HOME.."/.lum/db"
 	print ("Updating ~/.lum/db ...")
-	System.cmd (
-		"mkdir -p "..dir.." && cd '"..dir.."' && rm -f * && "..
+	local a = "mkdir -p "..dir.." && cd '"..dir.."' && rm -f * && "..
 		"for a in "..Lumit.REPOS.." ; do "..
 		"wget --no-check-certificate -c -q --progress=bar:force $a"..
-		" ; done",
+		" ; done"
+	System.cmd (a,
 		function (cmd, ret) 
 			if ret>0 then
 				print (cmd:replace(";","\n"))
@@ -400,13 +403,33 @@ function Lumit.sync(self, fn)
 end
 
 function Lumit.push(self, fn)
-	-- TODO: use mktemp
 	local argv2 = process.argv[2] or ""
-	local x = "lum -j "..argv2.." | tee /tmp/"..self.USER.."; "..
-	Lumit.PUSH:gsub ("$0", "/tmp/"..self.USER).."; "..
-	"rm -f /tmp/"..self.USER
-	p ("PUSH", x)
-	System.cmd (x)
+	Math.randomseed (OS.time ())
+	local d = "/tmp/_lumwrk."..Math.floor (Math.random()*1000000)
+	process = require ("process")
+	-- TODO: this is not yet implemented in luvit!
+	if process.on then
+		process:on("SIGINT", function (x) 
+			p("SIGINT")
+			System.cmd ("rm -f "..f)
+		end)
+	end
+	local f = d.."/"..self.USER
+	UV.fs_stat (argv2, function (e, x)
+		local cmd = "mkdir -p "..d.." ; "
+		if argv2 == "" or x.is_directory then
+			cmd = cmd..
+				"lum -j "..argv2.." | tee "..f.." ; "..
+				Lumit.PUSH:gsub ("$0", f)
+		else
+			cmd = cmd..
+				"cat "..argv2.." | tee "..f.." ; "..
+				Lumit.PUSH:gsub ("$0", f)
+		end
+		p ("PUSH", cmd)
+		System.cmd (cmd)
+		System.cmd ("rm -f "..f)
+	end)
 end
 
 return Lumit

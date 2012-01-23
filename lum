@@ -1,13 +1,14 @@
 #!/usr/bin/env luvit
 
 local Lumit = require ("lumit")
-Lumit.VERSION = "0.2"
+Lumit.VERSION = "0.3"
 
+-- TODO dist                 create a distribution tarball of this package
 function show_help()
 	print [[
 lum - luvit modules
 
- Actions:
+ Package:
     -b, build            compile module
     -c, clean ([pkg])    clean module
     -D, deploy [path]    install current package into destination
@@ -18,15 +19,17 @@ lum - luvit modules
     -l, ls, list         alias for 'ls'. list all installed packages
     -r, remove [pkg]     alias for 'lum rm' (uninstall package)
 
- Package repository:
+ Repository:
     -j, json             create json from current package
-    -p, push [path]      create json and push it
+    -p, push [path]      push json from file or directory to REPOS
     -s, search [str]     search in pkg database
     -S, sync             synchronize local database from remote repositories
     -v, version          show version
 
  Environment and ~/.lum/config:
     CC, CFLAGS, LDFLAGS, LUA_DIR, LUVIT_DIR, USER, PUSH, REPOS
+    REPOS=http://lolcathost.org/lum/pancake
+    PUSH=scp $0 yourhost:/srv/http/www/lum
 ]]
 end
 

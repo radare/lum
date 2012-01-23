@@ -1,11 +1,11 @@
 local System = {}
 
-function System.cmd(line,fn)
+function System.cmd(line, fn)
 	local child = require ('process').spawn('/bin/sh', {'-c', line}, {})
-	child.stdout:on ('data', function(data)
+	child.stdout:on ('data', function (data)
 	  print (data:sub(1,#data-1))
 	end)
-	child.stderr:on ('data', function(data)
+	child.stderr:on ('data', function (data)
 	  print (data:sub(1,#data-1))
 	end)
 	child:on ('exit', function (exit_status, term_signal)
