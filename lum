@@ -6,7 +6,6 @@ local Lumit = require ("lumit")
 
 Lumit.VERSION = "0.3"
 
--- TODO dist                 create a distribution tarball of this package
 function show_help()
 	print [[
 lum - luvit module manager
@@ -24,7 +23,8 @@ lum - luvit module manager
 
  Repository:
     -j, json             create json from current package
-    -p, push [path]      push json from file or directory to REPOS
+    -p, dist             create distribution distribution package
+    -P, push [path]      push json from file or directory to REPOS
     -s, search [str]     search in pkg database
     -S, sync             synchronize local database from remote repositories
     -v, version          show version
@@ -177,6 +177,8 @@ FS.read_file (home.."/.lum/config", function (err, data)
 			Lumit:list ()
 		elseif a0 == "help" or a0 == "-h" then
 			show_help ()
+		elseif a0 == "dist" or a0 == "-p" then
+			Lumit:dist ()
 		elseif a0 == "info" or a0 == "-I" then
 			Lumit:info (process.argv[2], function (pkg)
 				if not pkg then
@@ -185,7 +187,7 @@ FS.read_file (home.."/.lum/config", function (err, data)
 					p (process.argv[2] or "./package.lua", pkg)
 				end
 			end)
-		elseif a0 == "push" or a0 == "-p" then
+		elseif a0 == "push" or a0 == "-P" then
 			Lumit:push (process.argv[2])
 		elseif a0 == "json" or a0 == "-j" then
 			print ("[")

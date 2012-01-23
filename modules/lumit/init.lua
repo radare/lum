@@ -99,15 +99,22 @@ function Lumit.build_dep_implicit(self, pkg, url, nextfn)
 	local wdpkg = Lumit.WRKDIR.."/"..pkg
 	local c = "mkdir -p "..wdpkg
 	System.cmd (c, function (out, err)
-		local c = "wget -q -c -O "..wdpkg..".zip --no-check-certificate '"..url.."'"
+		local c = "echo 'nothing to download'"
+		if url then
+			c = "wget -c -O "..wdpkg..".zip --no-check-certificate '"..url.."'"
+		end
 		System.cmd (c, function (out, err)
 			-- if err then process.exit (1) end
-			c = "mkdir -p "..wdpkg.." ; cd "..wdpkg.." ; unzip -o ../"..pkg..".zip"
+			local zipfile = Lumit.CWD.."/"..pkg..".zip"
+			if pkg:sub (1,1) == '/' then
+				zipfile = pkg..".zip"
+			end
+			c = "mkdir -p "..wdpkg.." ; cd "..wdpkg.." && unzip -o "..zipfile
 			System.cmd (c, function (out, err)
 				if not err == 0 then p ("error: "..c) end
-				c = "cd "..wdpkg.. "/* ; pwd  ; lum -D ../../.."
+				c = "cd "..wdpkg.. "/* && pwd  ; lum -D "..Lumit.CWD
 				System.cmd (c, function (out, err)
-					p ("wrkdone")
+					if nextfn then nextfn () end
 				end)
 			end)
 		end)
@@ -179,8 +186,15 @@ function Lumit.build_dep(self, pkg, nextfn)
 					end)
 				end)
 			elseif x.type == "dist" then
+				local pkg = p.name
 				-- distribution tarball
-				p ("ERROR", "Unimplemented package type")
+				local implicit = pkg:find ('.zip')
+				if implicit then -- implicit package file
+					self:build_dep_implicit (pkg:sub (0, implicit-1), nil, nextfn)
+					return
+				else
+					p ("ERROR", "Unimplemented package type")
+				end
 			else
 				p ("ERROR", "Unknown package type '"..x.type.."'")
 			end
@@ -188,6 +202,14 @@ function Lumit.build_dep(self, pkg, nextfn)
 		if nextfn then nextfn () end
 	end)
 	end)
+end
+
+function Lumit.dist(self, nextfn)
+	local p = require (self.CWD.."/package.lua")
+	-- if -d .git
+	local d = p.name.."-"..p.version
+	local cmd = "rm -f "..d..".zip ; git clone . "..d.." ; cp -rf modules "..d.."/ ; rm -rf "..d.."/.git* ; zip -mr "..d..".zip "..d
+	System.cmd (cmd, nextfn)
 end
 
 function Lumit.build(self, nextfn)
@@ -286,7 +308,12 @@ function Lumit.install(self, pkg, nextfn)
 		print ("Usage: lum install [pkg]")
 		process.exit (1)
 	else
-		self:build_dep (pkg, nextfn)
+		local implicit = pkg:find ('.zip')
+		if implicit then -- implicit package file
+			self:build_dep_implicit (pkg:sub (0, implicit-1), nil, nextfn)
+		else
+			self:build_dep (pkg, nextfn)
+		end
 	end
 end
 
@@ -297,10 +324,17 @@ function Lumit.deploy(self, path, nextfn)
 	end
 	self:info (nil, function (pkg)
 		if not pkg then
-			p("oops")
+			p ("oops")
 			process.exit (1)
 		end
 		local pkgname = pkg['name']
+		if FS.exists_sync (path.."/package.lua") then
+			local pk = require (path.."/package.lua")
+			if (pk.name == pkgname) then
+				p("ERROR", "Cannot deploy on itself")
+				process.exit (1)
+			end
+		end
 		local cmd = ""
 		if pkg['main'] then
 			cmd =
@@ -366,7 +400,7 @@ function Lumit.list(self)
 	-- TODO: show package.lua info
 	-- TODO: rewrite in pure lua
 	if FS.exists_sync ("modules") then
-		System.cmd ("ls modules/*/package.lua | cut -d / -f 2")
+		System.cmd ("ls modules/*/package.lua 2> /dev/null | cut -d / -f 2")
 	end
 end
 
