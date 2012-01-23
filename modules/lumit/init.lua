@@ -104,8 +104,11 @@ function Lumit.build_dep_implicit(self, pkg, url, nextfn)
 			-- if err then process.exit (1) end
 			c = "mkdir -p "..wdpkg.." ; cd "..wdpkg.." ; unzip -o ../"..pkg..".zip"
 			System.cmd (c, function (out, err)
-				if err then p ("error: "..c) end
-				p ("wrkdone")
+				if not err == 0 then p ("error: "..c) end
+				c = "cd "..wdpkg.. "/* ; pwd  ; lum -D ../../.."
+				System.cmd (c, function (out, err)
+					p ("wrkdone")
+				end)
 			end)
 		end)
 	end)
@@ -244,7 +247,9 @@ function Lumit.deps(self, nextfn)
 	if pkg.dependencies then
 		for k, v in pairs (pkg.dependencies) do
 			if not (type (k) == "number") then
-				self:build_dep_implicit (k, v)
+				if not FS.exists_sync ("./modules/"..k) then
+					self:build_dep_implicit (k, v)
+				end
 			end
 		end
 		-- name -- database repo
@@ -306,9 +311,13 @@ function Lumit.deploy(self, path, nextfn)
 		else
 			cmd =
 				-- "ls modules/"..pkgname.."/ ; "..
-				"mkdir -p '"..path.."/modules/"..pkgname.."'\n"..
-				"cp -f package.lua '"..path.."/modules/"..pkgname.."'\n"..
-				"cp -f modules/"..pkgname.."/* '"..path.."/modules/"..pkgname.."'"
+				"mkdir -p '"..path.."/modules/"..pkgname.."' ; \n"..
+				"cp -f package.lua '"..path.."/modules/"..pkgname.."' ; \n"..
+				"if [ -f init.lua ]; then\n"..
+				"  cp -f init.lua '"..path.."/modules/"..pkgname.."' ; "..
+				"else\n"..
+				"  cp -f modules/"..pkgname.."/* '"..path.."/modules/"..pkgname.."' ; "..
+				"fi\n"
 		end
 		-- TODO: copy binaries using luvit-fsutils
 		-- p ("--->"..cmd)
@@ -395,7 +404,7 @@ function Lumit.sync(self, fn)
 	System.cmd (a,
 		function (cmd, ret) 
 			if ret>0 then
-				print (cmd:replace(";","\n"))
+				print (cmd:replace (";","\n"))
 			else
 				print ("Done")
 			end
@@ -410,8 +419,8 @@ function Lumit.push(self, fn)
 	process = require ("process")
 	-- TODO: this is not yet implemented in luvit!
 	if process.on then
-		process:on("SIGINT", function (x) 
-			p("SIGINT")
+		process:on ("SIGINT", function (x) 
+			p ("SIGINT")
 			System.cmd ("rm -f "..f)
 		end)
 	end
