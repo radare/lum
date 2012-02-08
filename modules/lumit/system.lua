@@ -1,7 +1,7 @@
 local System = {}
 
 function System.cmd(line, fn)
-	local child = require ('process').spawn('/bin/sh', {'-c', line}, {})
+	local child = require ('childprocess').spawn('/bin/sh', {'-c', line}, {})
 	child.stdout:on ('data', function (data)
 	  print (data:sub(1,#data-1))
 	end)
@@ -19,7 +19,7 @@ end
 function System.cmdstr(line, fn)
 	local str = ""
 	local fini = nil
-	local child = require ('process').spawn ('/bin/sh', {'-c', line}, {})
+	local child = require ('childprocess').spawn ('/bin/sh', {'-c', line}, {})
 	child.stdout:on ('data', function (data)
 		str = str..data
 		if fn then

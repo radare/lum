@@ -133,7 +133,7 @@ end
 
 local FS = require ("fs")
 local home = process.env['HOME']
-FS.read_file (home.."/.lum/config", function (err, data)
+FS.readFile (home.."/.lum/config", function (err, data)
 	if not err then
 		-- TODO: process env override config? --
 		local ls = split (data, "\n") 

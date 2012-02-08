@@ -244,7 +244,7 @@ end
 
 function Lumit.build(self, nextfn)
 	local path = self.LUA_DIR or self.LUVIT_DIR.."/luajit" or ""
-	if not FS.exists_sync (path.."/lua.h") then
+	if not FS.existsSync (path.."/lua.h") then
 		p ("Cannot found in "..path)
 		--path = path.."/deps/luajit/src"
 		if not FS.exists_sync (path.."/lua.h") then
@@ -275,7 +275,7 @@ function Lumit.build(self, nextfn)
 		end
 
 		--p("ldflags", ldflags)
-		if FS.exists_sync ("Makefile") then
+		if FS.existsSync ("Makefile") then
 			local cmd = 
 				" CC='"..self.CC.."'"..
 				" CFLAGS='-w "..cflags.."'"..
