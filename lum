@@ -48,11 +48,11 @@ function split(str, pat)
 			table.insert(t, cap)
                 end
                 last_end = e+1
-                s, e, cap = str:find(fpat, last_end)
+                s, e, cap = str:find (fpat, last_end)
         end
         if last_end <= #str then
-                cap = str:sub(last_end)
-                table.insert(t, cap)
+                cap = str:sub (last_end)
+                table.insert (t, cap)
         end
         return t
 end
@@ -63,13 +63,13 @@ function getsource(path, fn)
 	--p("getsource", path)
 	--- TODO: Add support for .svn
 	--p(path.."/.git")
-	if FS.exists_sync (path.."/.git") then
+	if FS.existsSync (path.."/.git") then
 		local fd = FS.open (path.."/.git/config", "r", 0644, function (err, fd)
 			if err then
 				p ("cannot find "..path.."/.git/config");
 				process.exit (1)
 			end
-					--fn (err, t, u)
+			--fn (err, t, u)
 			FS.read (fd, 0, 4096, function (err, data)
 				if err then
 					p ("error reading\n");
@@ -96,7 +96,7 @@ function getsource(path, fn)
 				end)
 			end)
 		end)
-	elseif FS.exists_sync (path.."/.hg") then
+	elseif FS.existsSync (path.."/.hg") then
 		local fd = FS.open (path.."/.hg/hgrc", "r", 0644, function (err, fd)
 			if err then
 				p ("cannot find "..path.."/.hg/hgrc");
@@ -205,7 +205,7 @@ FS.readFile (home.."/.lum/config", function (err, data)
 				dir = process.cwd ().."/"..dir
 			end
 			local ctr = 1
-			if FS.exists_sync (dir.."/package.lua") then
+			if FS.existsSync (dir.."/package.lua") then
 				ctr = 0
 			end
 			showjson (dir, function (x)
@@ -229,7 +229,7 @@ FS.readFile (home.."/.lum/config", function (err, data)
 						process.exit (1)
 					end
 					local ctr = #files
-					for i=1,#files do
+					for i=1, #files do
 						showjson (dir.."/"..files[i], function (x)
 							ctr = ctr-1
 							if x then
@@ -264,7 +264,7 @@ function showjson(path, fn)
 		path = process.cwd().."/"
 	end
 
-	if FS.exists_sync (path.."/package.lua") then
+	if FS.existsSync (path.."/package.lua") then
 		Lumit:info (path.."/package", function (pkg)
 			if not pkg then 
 				fn (nil)

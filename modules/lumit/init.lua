@@ -91,7 +91,7 @@ end
 function Lumit.clean(self, pkg, nextfn)
 	if pkg then
 		-- XXX. must cd + lum imho
-		if FS.exists_sync (Lumit.WRKDIR..pkg.."/Makefile") then
+		if FS.existsSync (Lumit.WRKDIR..pkg.."/Makefile") then
 			System.cmd ("cd "..Lumit.WRKDIR.."/"..pkg.." ; "..Lumit.MAKE.." clean", function (ret)
 				if nextfn then nextfn (self) end
 			end)
@@ -99,7 +99,7 @@ function Lumit.clean(self, pkg, nextfn)
 			if nextfn then nextfn (self) end
 		end
 	else
-		if FS.exists_sync ("Makefile") then
+		if FS.existsSync ("Makefile") then
 			System.cmd (Lumit.MAKE.." clean", function (ret)
 				if nextfn then nextfn (self) end
 			end)
@@ -145,7 +145,7 @@ function Lumit.build_module(self, pkg, nextfn)
 		repo = pkg:sub (at+1)
 		pkg = pkg:sub (0, at-1)
 	end
-	if FS.exists_sync ("./modules/"..pkg) then
+	if FS.existsSync ("./modules/"..pkg) then
 		-- p ("module "..pkg.." already installed")
 		return
 	end
@@ -159,7 +159,7 @@ function Lumit.build_module(self, pkg, nextfn)
 		end
 		local wrkname = wrkdir.."/"..x.name
 		-- print ("==> "..u.." : "..x.name)
-		if FS.exists_sync (wrkname) then
+		if FS.existsSync (wrkname) then
 			local cmd = ""
 			if Lumit.UPDATE then
 				if x.type == "git" then
@@ -190,7 +190,7 @@ function Lumit.build_module(self, pkg, nextfn)
 			return
 		else
 			if x.type == "git" then
-				local cmd = "mkdir -p "..wrkdir.." ; git clone "..x.url.." "..wrkdir.."/"..x.name
+				local cmd = "mkdir -p '"..wrkdir.."' ; git clone "..x.url.." "..wrkdir.."/"..x.name
 				p(cmd)
 				Lumit.rmfiles = wrkdir.."/"..x.name.." "..self.ROOT.."/modules/"..x.name
 				System.cmd (cmd, function (cmd, err)
@@ -247,7 +247,7 @@ function Lumit.build(self, nextfn)
 	if not FS.existsSync (path.."/lua.h") then
 		p ("Cannot found in "..path)
 		--path = path.."/deps/luajit/src"
-		if not FS.exists_sync (path.."/lua.h") then
+		if not FS.existsSync (path.."/lua.h") then
 	--		p ("ERROR", "Cannot find lua.h in LUVIT_DIR ("..self.LUVIT_DIR..")")
 			p ("INFO", "Fill your ~/.lum/config with KEY=VALUE lines")
 	--		process.exit (1)
@@ -281,7 +281,7 @@ function Lumit.build(self, nextfn)
 				" CFLAGS='-w "..cflags.."'"..
 				" LDFLAGS='"..ldflags.."'"..
 				" LUA_DIR='"..path.."' "..Lumit.MAKE
-			p(cmd)
+			p (cmd)
 			System.cmd (cmd, function (cmd, err)
 				if err>0 then
 					print ("exit with "..err)
@@ -301,7 +301,7 @@ function Lumit.deps(self, nextfn)
 	if pkg.dependencies then
 		for k, v in pairs (pkg.dependencies) do
 			if not (type (k) == "number") then
-				if not FS.exists_sync ("./modules/"..k) then
+				if not FS.existsSync ("./modules/"..k) then
 					self:build_implicit_module (k, v)
 				end
 			end
@@ -324,7 +324,7 @@ function Lumit.uninstall(self, pkg, nextfn)
 	end
 	
 	local f = "modules/"..pkg
-	if FS.exists_sync (f) then
+	if FS.existsSync (f) then
 		local cmd = "rm -rf "..f
 		System.cmd (cmd, function (err)
 			if nextfn then nextfn (err) end
@@ -360,7 +360,7 @@ function Lumit.deploy(self, path, nextfn)
 			process.exit (1)
 		end
 		local pkgname = pkg['name']
-		if FS.exists_sync (path.."/package.lua") then
+		if FS.existsSync (path.."/package.lua") then
 			local pk = require (path.."/package.lua")
 			if (pk.name == pkgname) then
 				p("ERROR", "Cannot deploy on itself")
@@ -432,7 +432,7 @@ end
 function Lumit.list(self)
 	-- TODO: show package.lua info
 	-- TODO: rewrite in pure lua
-	if FS.exists_sync ("modules") then
+	if FS.existsSync ("modules") then
 		System.cmd ("ls modules/*/package.lua 2> /dev/null | cut -d / -f 2")
 	end
 end
