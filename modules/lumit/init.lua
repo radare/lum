@@ -1,5 +1,7 @@
 -- copyleft -- 2011-2012 -- pancake<nopcode.org> --
 
+-- TODO: use luvit --libs
+
 local System = require ("./system")
 local Stack = require ("./stack")
 local DB = require ("./db")
@@ -66,7 +68,9 @@ function Lumit.init (self, fn)
 			process.exit (1)
 		end
 	end)
-	System.cmdstr ("luvit-config --cflags|cut -d ' ' -f 1| cut -c 3-", function (err, x)
+	-- System.cmdstr ("luvit --cflags|cut -d ' ' -f 1| cut -c 3-", function (err, x)
+	System.cmdstr ("luvit --cflags", function (err, x)
+		x = x:sub (3, x:find (' ')-1)
 		Lumit.LUVIT_DIR = x
 		Lumit.LUA_DIR = x.."/luajit"
 		--if not Lumit.LUA_DIR and Lumit.LUVIT_DIR then
@@ -121,14 +125,17 @@ function Lumit.build_implicit_module(self, pkg, url, nextfn)
 		end
 		System.cmd (c, function (out, err)
 			-- if err then process.exit (1) end
-			local zipfile = Lumit.ROOT.."/"..pkg..".zip"
-			if pkg:sub (1,1) == '/' then
-				zipfile = pkg..".zip"
-			end
+			--local zipfile = Lumit.WRKDIR.."/"..pkg..".zip"
+			local zipfile = "../"..pkg..".zip"
+			--if pkg:sub (1,1) == '/' then
+			--	zipfile = pkg..".zip"
+			--end
 			c = "mkdir -p "..wdpkg.." ; cd "..wdpkg.." && unzip -o "..zipfile
+p(c)
 			System.cmd (c, function (out, err)
 				if not err == 0 then p ("error: "..c) end
 				c = "cd "..wdpkg.. "/* && pwd  ; lum -D "..Lumit.ROOT
+p("RUN CMD "..c)
 				System.cmd (c, function (out, err)
 					if nextfn then nextfn () end
 				end)
@@ -189,7 +196,9 @@ function Lumit.build_module(self, pkg, nextfn)
 			end)
 			return
 		else
-			if x.type == "git" then
+			if x.type == "zip" then
+				Lumit:build_implicit_module (x.name, x.url)
+			elseif x.type == "git" then
 				local cmd = "mkdir -p '"..wrkdir.."' ; git clone "..x.url.." "..wrkdir.."/"..x.name
 				p(cmd)
 				Lumit.rmfiles = wrkdir.."/"..x.name.." "..self.ROOT.."/modules/"..x.name
@@ -243,7 +252,12 @@ function Lumit.dist(self, nextfn)
 end
 
 function Lumit.build(self, nextfn)
-	local path = self.LUA_DIR or self.LUVIT_DIR.."/luajit" or ""
+	local path = self.LUA_DIR
+	if self.LUVIT_DIR then
+		path = self.LUVIT_DIR.."/luajit" 
+	else
+		path = ""
+	end
 	if not FS.existsSync (path.."/lua.h") then
 		p ("Cannot found in "..path)
 		--path = path.."/deps/luajit/src"
@@ -255,7 +269,7 @@ function Lumit.build(self, nextfn)
 	end
 	-- C preprocessor flags
 --	path = "/usr/"
-	System.cmdstr ("luvit-config --cflags", function (err, y)
+	System.cmdstr ("luvit --cflags", function (err, y)
 		local cflags = "-I"..path
 		if not err then
 			cflags = y
@@ -363,7 +377,7 @@ function Lumit.deploy(self, path, nextfn)
 		if FS.existsSync (path.."/package.lua") then
 			local pk = require (path.."/package.lua")
 			if (pk.name == pkgname) then
-				p("ERROR", "Cannot deploy on itself")
+				p ("ERROR", "Cannot deploy on itself")
 				process.exit (1)
 			end
 		end
@@ -387,6 +401,7 @@ function Lumit.deploy(self, path, nextfn)
 		end
 		-- TODO: copy binaries using luvit-fsutils
 		-- p ("cmd", cmd)
+p(cmd)
 		Lumit.rmfiles = path.."/modules/"..pkgname
 		System.cmd (cmd, function (cmd, err)
 			if err>0 then
